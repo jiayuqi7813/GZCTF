@@ -9,6 +9,10 @@
   },
   "content": {
     "create": "Kamu bisa membuat tim dan mengundang orang lain untuk bergabung.",
+    "disallow_create": {
+      "content": "Anda telah mencapai jumlah maksimum tim yang dapat Anda miliki.<br/>Mohon untuk membubarkan tim yang ada untuk membuat tim baru.",
+      "title": "Anda telah melebihi batas"
+    },
     "disband": {
       "confirm": {
         "message": "Apakah kamu yakin ingin membubarkan tim \"{{team}}\"?",
@@ -28,9 +32,9 @@
         "title": "Konfirmasi Keluar"
       }
     },
-    "disallow_create": {
-      "content": "Anda telah mencapai jumlah maksimum tim yang dapat Anda miliki.<br/>Mohon untuk membubarkan tim yang ada untuk membuat tim baru.",
-      "title": "Anda telah melebihi batas"
+    "no_team": {
+      "hint": "Buat tim baru atau bergabung dengan tim yang sudah ada untuk memulai",
+      "title": "Belum ada tim"
     },
     "role": {
       "captain": "Kapten",
