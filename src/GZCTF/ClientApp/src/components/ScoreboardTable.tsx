@@ -5,7 +5,6 @@ import {
   Center,
   Grid,
   Group,
-  Input,
   Pagination,
   Paper,
   Select,
@@ -22,10 +21,11 @@ import { mdiAccountGroup, mdiMagnify } from '@mdi/js'
 import { Icon } from '@mdi/react'
 import cx from 'clsx'
 import dayjs from 'dayjs'
-import React, { FC, useEffect, useState } from 'react'
+import React, { FC, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { ScoreboardItemModal } from '@Components/ScoreboardItemModal'
+import { ScrollingText } from '@Components/ScrollingText'
 import { useLanguage } from '@Utils/I18n'
 import {
   BloodBonus,
@@ -41,7 +41,7 @@ import misc from '@Styles/Misc.module.css'
 import classes from '@Styles/ScoreboardTable.module.css'
 import tooltipClasses from '@Styles/Tooltip.module.css'
 
-const Widths = [60, 55, 170, 55, 70, 60]
+const Widths = [60, 60, 170, 60, 70, 60]
 const Lefts = Widths.reduce(
   (acc, cur) => {
     acc.push(acc[acc.length - 1] + cur)
@@ -50,7 +50,7 @@ const Lefts = Widths.reduce(
   [0]
 )
 
-const TableHeader = (table: Record<string, ChallengeInfo[]>) => {
+const TableHeader = React.memo((table: Record<string, ChallengeInfo[]>) => {
   const theme = useMantineTheme()
   const { colorScheme } = useMantineColorScheme()
   const { t } = useTranslation()
@@ -127,7 +127,7 @@ const TableHeader = (table: Record<string, ChallengeInfo[]>) => {
       </Table.Tr>
     </Table.Thead>
   )
-}
+})
 
 const TableRow: FC<{
   item: ScoreboardItem
@@ -136,11 +136,15 @@ const TableRow: FC<{
   onOpenDetail: () => void
   iconMap: Map<SubmissionType, PartialIconProps | undefined>
   challenges?: Record<string, ChallengeInfo[]>
-}> = ({ item, challenges, onOpenDetail, iconMap, tableRank, allRank }) => {
+}> = React.memo(({ item, challenges, onOpenDetail, iconMap, tableRank, allRank }) => {
   const challengeCategoryLabelMap = useChallengeCategoryLabelMap()
   const solved = item.solvedChallenges
   const theme = useMantineTheme()
   const { locale } = useLanguage()
+
+  const totalScore = useMemo(() => {
+    return solved?.reduce((acc, cur) => acc + (cur?.score ?? 0), 0) ?? 0
+  }, [solved])
 
   return (
     <Table.Tr>
@@ -163,19 +167,7 @@ const TableRow: FC<{
             {item.name?.slice(0, 1) ?? 'T'}
           </Avatar>
           <Stack gap={0} h="2.5rem" justify="center" w={Widths[2] - 45}>
-            <Input
-              variant="unstyled"
-              value={item.name}
-              readOnly
-              size="sm"
-              __vars={{
-                '--input-height': 'var(--mantine-line-height-sm)',
-              }}
-              classNames={{
-                wrapper: cx(classes.pointer, classes.wapper),
-                input: cx(classes.pointer, classes.input),
-              }}
-            />
+            <ScrollingText size="sm" text={item.name || ''} onClick={onOpenDetail} />
             {!!item.division && (
               <Text size="xs" c="dimmed" ta="start" truncate className={classes.text}>
                 {item.division}
@@ -188,7 +180,7 @@ const TableRow: FC<{
         {solved?.length}
       </Table.Td>
       <Table.Td className={cx(classes.mono, classes.left)} style={{ left: Lefts[4] }}>
-        {solved?.reduce((acc, cur) => acc + (cur?.score ?? 0), 0)}
+        {totalScore}
       </Table.Td>
       {challenges &&
         Object.keys(challenges).map((key) =>
@@ -229,7 +221,7 @@ const TableRow: FC<{
         )}
     </Table.Tr>
   )
-}
+})
 
 const ITEM_COUNT_PER_PAGE = 30
 
@@ -248,31 +240,27 @@ export const ScoreboardTable: FC<ScoreboardProps> = ({ division, setDivision }) 
   const [keyword, setKeyword] = useState('')
   const [debouncedKeyword] = useDebouncedValue(keyword, 400)
 
-  const [filteredList, setFilteredList] = useState<ScoreboardItem[]>([])
-
   const { scoreboard } = useGameScoreboard(numId)
+
+  const filteredList = useMemo(() => {
+    if (!scoreboard?.items) return []
+
+    if (!!debouncedKeyword && debouncedKeyword.length > 0) {
+      return scoreboard.items.filter((s) => s.name?.toLowerCase().includes(debouncedKeyword.toLowerCase()))
+    }
+
+    if (division !== 'all') {
+      return scoreboard.items.filter((s) => s.division === division)
+    }
+
+    return scoreboard.items
+  }, [scoreboard, debouncedKeyword, division])
 
   useEffect(() => {
     setPage(1)
     setDivision('all')
     setKeyword('')
   }, [id])
-
-  useEffect(() => {
-    if (!scoreboard?.items) return
-
-    if (!!debouncedKeyword && debouncedKeyword.length > 0) {
-      setFilteredList(scoreboard.items.filter((s) => s.name?.toLowerCase().includes(debouncedKeyword.toLowerCase())))
-      return
-    }
-
-    if (division !== 'all') {
-      setFilteredList(scoreboard.items.filter((s) => s.division === division))
-      return
-    }
-
-    setFilteredList(scoreboard.items)
-  }, [scoreboard, debouncedKeyword, division])
 
   const base = (activePage - 1) * ITEM_COUNT_PER_PAGE
   const currentItems = filteredList?.slice(base, base + ITEM_COUNT_PER_PAGE)
