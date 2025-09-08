@@ -231,7 +231,7 @@ const Countdown: FC = () => {
     drawCanvas();
   }, [drawCanvas, CANVAS_WIDTH, CANVAS_HEIGHT]);
 
-  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasClick = async (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!currentUser) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -249,8 +249,9 @@ const Countdown: FC = () => {
         newPixels[y][x] = !newPixels[y][x];
         return newPixels;
       });
+      await api.countdown.countdownUpdatePixel(x, y, !pixels[y][x]);
     }
-    mutate();
+    await mutate();
   };
 
   if (!countdownData) {
