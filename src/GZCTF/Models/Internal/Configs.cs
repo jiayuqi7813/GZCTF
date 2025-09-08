@@ -422,6 +422,7 @@ public class ContainerProvider
     public string PublicEntry { get; set; } = string.Empty;
     public KubernetesConfig? KubernetesConfig { get; set; }
     public DockerConfig? DockerConfig { get; set; }
+    public string FlagEnvName { get; set; } = "GZCTF_FLAG";
 }
 
 public class DockerConfig
@@ -584,4 +585,12 @@ public class ForwardedOptions : ForwardedHeadersOptions
 
         TrustedProxies?.ForEach(proxy => proxy.ResolveIP().ToList().ForEach(ip => options.KnownProxies.Add(ip)));
     }
+}
+
+public class CountdownConfig
+{
+    public bool Enable { get; set; }
+    public DateTimeOffset StartTimeUtc { get; set; }
+    public int Width { get; set; } = 80;
+    public int Height { get; set; } = 40;
 }

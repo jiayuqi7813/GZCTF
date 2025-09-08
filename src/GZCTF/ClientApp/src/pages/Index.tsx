@@ -15,6 +15,7 @@ import { useRecentGames } from '@Hooks/useGame'
 import { usePageTitle } from '@Hooks/usePageTitle'
 import api, { PostInfoModel } from '@Api'
 import classes from '@Styles/Index.module.css'
+import Countdown from '@Components/Countdown'
 
 const Home: FC = () => {
   const { t } = useTranslation()
@@ -65,6 +66,7 @@ const Home: FC = () => {
   return (
     <WithNavBar minWidth={0} withFooter withHeader stickyHeader>
       <Stack justify="flex-start">
+        <Countdown />
         {isMobile && showGames && showGames.length > 0 && <RecentGameCarousel games={showGames} />}
         <Stack align="center">
           <Group wrap="nowrap" gap={4} justify="space-between" align="flex-start" w="100%">
@@ -81,7 +83,7 @@ const Home: FC = () => {
                       <Icon path={mdiFlagCheckered} size={1.5} color={theme.colors[theme.primaryColor][4]} />
                       <Title order={3}>{t('common.content.home.recent_games')}</Title>
                     </Group>
-                    {showGames?.map((game) => (
+                    {showGames?.map?.((game) => (
                       <RecentGame key={game.id} game={game} />
                     ))}
                   </Stack>

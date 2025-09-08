@@ -17,12 +17,15 @@ public class SwarmManager : IContainerManager
     readonly DockerClient _client;
     readonly ILogger<SwarmManager> _logger;
     readonly DockerMetadata _meta;
+    readonly ContainerProvider _config;
 
-    public SwarmManager(IContainerProvider<DockerClient, DockerMetadata> provider, ILogger<SwarmManager> logger)
+    public SwarmManager(IContainerProvider<DockerClient, DockerMetadata> provider, ILogger<SwarmManager> logger, IConfiguration configuration)
     {
         _logger = logger;
         _meta = provider.GetMetadata();
         _client = provider.GetProvider();
+        _config = configuration.GetSection(nameof(ContainerProvider)).Get<ContainerProvider>() ??
+                     new();
 
         logger.SystemLog(StaticLocalizer[nameof(Resources.Program.ContainerManager_SwarmMode)],
             TaskStatus.Success,
@@ -196,7 +199,7 @@ public class SwarmManager : IContainerManager
                             Env =
                                 config.Flag is null
                                     ? [$"GZCTF_TEAM_ID={config.TeamId}"]
-                                    : [$"GZCTF_FLAG={config.Flag}", $"GZCTF_TEAM_ID={config.TeamId}"]
+                                    : [$"{_config.FlagEnvName}={config.Flag}", $"GZCTF_TEAM_ID={config.TeamId}"]
                         },
                     Resources = new()
                     {

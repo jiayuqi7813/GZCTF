@@ -17,12 +17,17 @@ public class DockerManager : IContainerManager
     readonly DockerClient _client;
     readonly ILogger<DockerManager> _logger;
     readonly DockerMetadata _meta;
+    readonly ContainerProvider _config;
 
-    public DockerManager(IContainerProvider<DockerClient, DockerMetadata> provider, ILogger<DockerManager> logger)
+    public DockerManager(IContainerProvider<DockerClient, DockerMetadata> provider,
+        ILogger<DockerManager> logger,
+        IConfiguration configuration)
     {
         _logger = logger;
         _meta = provider.GetMetadata();
         _client = provider.GetProvider();
+        _config = configuration.GetSection(nameof(ContainerProvider)).Get<ContainerProvider>() ??
+                     new();
 
         logger.SystemLog(StaticLocalizer[nameof(Resources.Program.ContainerManager_DockerMode)],
             TaskStatus.Success, LogLevel.Debug);
@@ -263,7 +268,7 @@ public class DockerManager : IContainerManager
             // Please see LICENSE_ADDENDUM.txt for details.
             Env = config.Flag is null
                 ? [$"GZCTF_TEAM_ID={config.TeamId}"]
-                : [$"GZCTF_FLAG={config.Flag}", $"GZCTF_TEAM_ID={config.TeamId}"],
+                : [$"{_config.FlagEnvName}={config.Flag}", $"GZCTF_TEAM_ID={config.TeamId}"],
             HostConfig = new()
             {
                 Memory = config.MemoryLimit * 1024 * 1024,

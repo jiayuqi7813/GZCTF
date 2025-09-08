@@ -1,6 +1,5 @@
 import { AppShell, Box, LoadingOverlay, Stack, useMantineColorScheme, useMantineTheme } from '@mantine/core'
 import React, { FC, useState } from 'react'
-import { AppFooter } from '@Components/AppFooter'
 import { AppHeader } from '@Components/AppHeader'
 import { AppNavbar } from '@Components/AppNavbar'
 import { CustomColorModal } from '@Components/CustomColorModal'
@@ -79,7 +78,7 @@ export const WithNavBar: FC<WithNavBarProps> = ({
               </Box>
               <CustomColorModal opened={colorModalOpened} onClose={() => setColorModalOpened(false)} />
             </Stack>
-            {withFooter && <AppFooter />}
+            {/* {withFooter && <AppFooter />} */}
           </AppShell.Main>
         </AppShell>
       </Watermark>

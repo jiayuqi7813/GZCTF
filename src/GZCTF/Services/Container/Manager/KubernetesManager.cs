@@ -17,13 +17,17 @@ public class KubernetesManager : IContainerManager
     readonly Kubernetes _client;
     readonly ILogger<KubernetesManager> _logger;
     readonly KubernetesMetadata _meta;
+    readonly ContainerProvider _config;
 
     public KubernetesManager(IContainerProvider<Kubernetes, KubernetesMetadata> provider,
-        ILogger<KubernetesManager> logger)
+        ILogger<KubernetesManager> logger,
+        IConfiguration configuration)
     {
         _logger = logger;
         _meta = provider.GetMetadata();
         _client = provider.GetProvider();
+        _config = configuration.GetSection(nameof(ContainerProvider)).Get<ContainerProvider>() ??
+                     new();
 
         logger.SystemLog(StaticLocalizer[nameof(Resources.Program.ContainerManager_K8sMode)],
             TaskStatus.Success,
@@ -89,7 +93,7 @@ public class KubernetesManager : IContainerManager
                                 ? [new V1EnvVar("GZCTF_TEAM_ID", config.TeamId)]
                                 :
                                 [
-                                    new V1EnvVar("GZCTF_FLAG", config.Flag),
+                                    new V1EnvVar(_config.FlagEnvName, config.Flag),
                                     new V1EnvVar("GZCTF_TEAM_ID", config.TeamId)
                                 ],
                         Ports = [new V1ContainerPort(config.ExposedPort)],

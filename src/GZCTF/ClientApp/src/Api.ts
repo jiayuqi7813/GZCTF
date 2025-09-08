@@ -826,6 +826,16 @@ export interface ProblemDetails {
   [key: string]: any;
 }
 
+export interface CanvasModel {
+  /** @format uint64 */
+  startTimeUtc?: number;
+  data?: string;
+  /** @format int32 */
+  width?: number;
+  /** @format int32 */
+  height?: number;
+}
+
 /** Post item (Edit) */
 export interface PostEditModel {
   /**
@@ -1004,7 +1014,7 @@ export interface GameNoticeModel {
 /** Challenge detailed information (Edit) */
 export interface ChallengeEditDetailModel {
   /**
-   * Challenge Id
+   * Challenge ID
    * @format int32
    */
   id?: number;
@@ -3377,6 +3387,68 @@ export class Api<
         body: data,
         type: ContentType.FormData,
         format: "json",
+        ...params,
+      }),
+  };
+  countdown = {
+    /**
+     * No description
+     *
+     * @tags Countdown
+     * @name CountdownGetCountdown
+     * @request GET:/api/countdown
+     */
+    countdownGetCountdown: (params: RequestParams = {}) =>
+      this.request<CanvasModel, RequestResponse>({
+        path: `/api/countdown`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @tags Countdown
+     * @name CountdownGetCountdown
+     * @request GET:/api/countdown
+     */
+    useCountdownGetCountdown: (
+      options?: SWRConfiguration,
+      doFetch: boolean = true,
+    ) =>
+      useSWR<CanvasModel, RequestResponse>(
+        doFetch ? `/api/countdown` : null,
+        options,
+      ),
+
+    /**
+     * No description
+     *
+     * @tags Countdown
+     * @name CountdownGetCountdown
+     * @request GET:/api/countdown
+     */
+    mutateCountdownGetCountdown: (
+      data?: CanvasModel | Promise<CanvasModel>,
+      options?: MutatorOptions,
+    ) => mutate<CanvasModel>(`/api/countdown`, data, options),
+
+    /**
+     * No description
+     *
+     * @tags Countdown
+     * @name CountdownUpdatePixel
+     * @request GET:/api/countdown/pixel/{x}/{y}/{value}
+     */
+    countdownUpdatePixel: (
+      x: number,
+      y: number,
+      value: boolean,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, RequestResponse>({
+        path: `/api/countdown/pixel/${x}/${y}/${value}`,
+        method: "GET",
         ...params,
       }),
   };

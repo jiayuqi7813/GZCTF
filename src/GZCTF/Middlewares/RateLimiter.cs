@@ -43,7 +43,12 @@ public static class RateLimiter
         /// <summary>
         /// Pow challenge generation limit
         /// </summary>
-        PowChallenge
+        PowChallenge,
+
+        /// <summary>
+        /// Countdown put pixel limit
+        /// </summary>
+        CountdownPutPixel,
     }
 
     public static void ConfigureRateLimiter(RateLimiterOptions options)
@@ -133,6 +138,12 @@ public static class RateLimiter
             o.TokenLimit = 100;
             o.TokensPerPeriod = 50;
             o.ReplenishmentPeriod = TimeSpan.FromSeconds(5);
+        });
+        options.AddTokenBucketLimiter(nameof(LimitPolicy.CountdownPutPixel), o =>
+        {
+            o.TokenLimit = 10;
+            o.TokensPerPeriod = 1;
+            o.ReplenishmentPeriod = TimeSpan.FromSeconds(10);
         });
     }
 }

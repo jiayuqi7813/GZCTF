@@ -262,4 +262,6 @@ public static class CacheKey
     /// HashPow cache
     /// </summary>
     public static string HashPow(string key) => $"_HP_{key}";
+    
+    public static string CountdownCanvas = "_CountdownCanvas";
 }

@@ -72,7 +72,7 @@ public class GameController(
         if (ContextHelper.IsNotModified(Request, Response, eTag, lastModified))
             return StatusCode(StatusCodes.Status304NotModified);
 
-        return Ok(limit > 0 ? games.Take(limit) : games);
+        return Ok((games != null && limit > 0) ? games.Take(limit) : games);
     }
 
     /// <summary>
