@@ -10,13 +10,12 @@ const PIXEL_SIZE = 12;
 const Countdown: FC = () => {
   const { t } = useTranslation();
 
-  const { data: countdownData, mutate, } = api.countdown.useCountdownGetCountdown({ refreshInterval: 1000 });
+  const { data: countdownData, mutate, } = api.countdown.useCountdownGetCountdown({ refreshInterval: 5000 });
   const { user: currentUser } = useUser();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const CANVAS_WIDTH = countdownData?.width || 0;
   const CANVAS_HEIGHT = countdownData?.height || 0;
-  const targetDate = countdownData?.startTimeUtc ? new Date(countdownData.startTimeUtc) : new Date();
 
   const centerX = Math.floor(CANVAS_WIDTH / 2);
   const centerY = Math.floor(CANVAS_HEIGHT / 2);
@@ -70,8 +69,10 @@ const Countdown: FC = () => {
 
   useEffect(() => {
     const calculateTimeLeft = () => {
+      if (!countdownData || !countdownData.startTimeUtc) return;
+
       const now = new Date().getTime();
-      const target = targetDate.getTime();
+      const target = countdownData.startTimeUtc!;
       const difference = target - now;
 
       if (difference > 0) {
@@ -89,7 +90,7 @@ const Countdown: FC = () => {
     calculateTimeLeft();
     const timer = setInterval(calculateTimeLeft, 1000);
     return () => clearInterval(timer);
-  }, [targetDate]);
+  }, [countdownData?.startTimeUtc, setTimeLeft]);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -103,7 +104,7 @@ const Countdown: FC = () => {
     for (let y = 0; y < CANVAS_HEIGHT; y++) {
       for (let x = 0; x < CANVAS_WIDTH; x++) {
         const isProtectedArea = x >= startX && x < startX + totalWidth && y >= startY && y < startY + 5;
-        ctx.fillStyle = isProtectedArea ? 'gray' : pixels[y][x] ? 'white' : 'black';
+        ctx.fillStyle = isProtectedArea ? 'gray' : pixels?.[y]?.[x] ? 'white' : 'black';
         ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
       }
     }
