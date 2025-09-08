@@ -87,9 +87,7 @@ jobs:
         id: meta
         with:
           images: |
-            gztime/gzctf
             ghcr.io/${{ github.repository }}/gzctf
-            registry.cn-shanghai.aliyuncs.com/gztime/gzctf
           flavor: |
             latest=${{ env.RELEASE }}
           tags: |
