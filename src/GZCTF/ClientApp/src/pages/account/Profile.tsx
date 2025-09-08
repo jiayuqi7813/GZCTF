@@ -167,7 +167,7 @@ const Profile: FC = () => {
             </Avatar>
           </Center>
         </Group>
-        <SimpleGrid cols={2}>
+        <SimpleGrid cols={1}>
           <TextInput
             label={t('account.label.email')}
             type="email"
@@ -176,7 +176,7 @@ const Profile: FC = () => {
             disabled
             readOnly
           />
-          <TextInput
+          {/* <TextInput
             label={t('account.label.phone')}
             type="tel"
             w="100%"
@@ -199,7 +199,7 @@ const Profile: FC = () => {
             value={profile.realName ?? ''}
             disabled={disabled}
             onChange={(event) => setProfile({ ...profile, realName: event.target.value })}
-          />
+          /> */}
         </SimpleGrid>
         <Textarea
           label={t('account.label.bio')}
