@@ -139,11 +139,20 @@ public static class RateLimiter
             o.TokensPerPeriod = 50;
             o.ReplenishmentPeriod = TimeSpan.FromSeconds(5);
         });
-        options.AddTokenBucketLimiter(nameof(LimitPolicy.CountdownPutPixel), o =>
+        options.AddPolicy(nameof(LimitPolicy.CountdownPutPixel), context =>
         {
-            o.TokenLimit = 10;
-            o.TokensPerPeriod = 1;
-            o.ReplenishmentPeriod = TimeSpan.FromSeconds(10);
+            var httpContext = (HttpContext)context;
+            var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+            return RateLimitPartition.GetTokenBucketLimiter(userId,
+                _ => new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = 10,
+                    TokensPerPeriod = 1,
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(10),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0
+                });
         });
     }
 }
