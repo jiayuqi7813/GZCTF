@@ -56,7 +56,7 @@ public class CountdownController(
     [EnableRateLimiting(nameof(RateLimiter.LimitPolicy.CountdownPutPixel))]
     [ProducesResponseType(typeof(RequestResponse), StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(RequestResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(RequestResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdatePixel(
         [FromRoute] int x,
         [FromRoute] int y,
@@ -78,7 +78,7 @@ public class CountdownController(
 
         canvas[y][x] = value;
         await SetCanvas(canvas, token);
-        return NoContent();
+        return Ok(new RequestResponse("Pixel updated", StatusCodes.Status200OK));
     }
 
     private async Task<byte[]> GetCanvas(CancellationToken token)
