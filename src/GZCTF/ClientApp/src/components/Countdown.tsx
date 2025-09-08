@@ -4,6 +4,7 @@ import classes from '@Styles/Countdown.module.css';
 import { Center, Stack, Text, Title } from '@mantine/core';
 import { useUser } from '@Hooks/useUser';
 import { useTranslation } from 'react-i18next';
+import { showErrorMsg } from '@Utils/Shared';
 
 const PIXEL_SIZE = 12;
 
@@ -244,12 +245,11 @@ const Countdown: FC = () => {
     if (isProtectedArea) return;
 
     if (x >= 0 && x < CANVAS_WIDTH && y >= 0 && y < CANVAS_HEIGHT) {
-      setPixels((prev) => {
-        const newPixels = prev.map((row) => [...row]);
-        newPixels[y][x] = !newPixels[y][x];
-        return newPixels;
-      });
-      await api.countdown.countdownUpdatePixel(x, y, !pixels[y][x]);
+      try {
+        await api.countdown.countdownUpdatePixel(x, y, !pixels[y][x]);
+      } catch (e) {
+        showErrorMsg(e, t);
+      }
     }
     await mutate();
   };
