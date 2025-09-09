@@ -2046,7 +2046,7 @@ export class HttpClient<SecurityDataType = unknown> {
       headers: {
         ...(method &&
           this.instance.defaults.headers[
-            method.toLowerCase() as keyof HeadersDefaults
+          method.toLowerCase() as keyof HeadersDefaults
           ]),
         ...params1.headers,
         ...(params2 && params2.headers),
@@ -3449,6 +3449,27 @@ export class Api<
       this.request<void, RequestResponse>({
         path: `/api/countdown/pixel/${x}/${y}/${value}`,
         method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Countdown
+     * @name CountdownUpdatePixelColor
+     * @request POST:/api/countdown/pixel/{x}/{y}
+     */
+    countdownUpdatePixelColor: (
+      x: number,
+      y: number,
+      color: string,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, RequestResponse>({
+        path: `/api/countdown/pixel/${x}/${y}`,
+        method: "POST",
+        body: JSON.stringify(color),
+        type: ContentType.Json,
         ...params,
       }),
   };

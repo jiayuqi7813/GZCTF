@@ -2,9 +2,9 @@ import api from '@Api';
 import { useUser } from '@Hooks/useUser';
 import classes from '@Styles/Countdown.module.css';
 import { showErrorMsg } from '@Utils/Shared';
-import { ActionIcon, Button, Center, Group, Stack, Text, Title } from '@mantine/core';
+import { ActionIcon, Button, Center, ColorPicker, Group, Popover, Stack, Text, Title } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { mdiCursorMove, mdiFullscreen, mdiFullscreenExit, mdiHome, mdiMagnify, mdiMinus, mdiPlus } from '@mdi/js';
+import { mdiCursorMove, mdiFullscreen, mdiFullscreenExit, mdiHome, mdiMagnify, mdiMinus, mdiPalette, mdiPlus } from '@mdi/js';
 import { Icon } from '@mdi/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +23,22 @@ const MOBILE_VIEWPORT_HEIGHT = 240;
 
 // 像素大小
 const PIXEL_SIZE = 12;
+
+// 预设颜色
+const PRESET_COLORS = [
+  '#FFFFFF', // 白色
+  '#FF0000', // 红色
+  '#00FF00', // 绿色
+  '#0000FF', // 蓝色
+  '#FFFF00', // 黄色
+  '#FF00FF', // 品红
+  '#00FFFF', // 青色
+  '#FFA500', // 橙色
+  '#800080', // 紫色
+  '#FFC0CB', // 粉色
+  '#808080', // 灰色
+  '#000000', // 黑色
+];
 
 enum InteractionMode {
   VIEW = 'view',
@@ -56,6 +72,10 @@ const Countdown: FC = () => {
   const [lastPinchDistance, setLastPinchDistance] = useState(0);
   const [pinchCenter, setPinchCenter] = useState({ x: 0, y: 0 });
 
+  // 颜色相关状态
+  const [selectedColor, setSelectedColor] = useState('#FFFFFF');
+  const [colorPickerOpened, setColorPickerOpened] = useState(false);
+
   // 倒计时状态
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
@@ -64,11 +84,11 @@ const Countdown: FC = () => {
     seconds: 0,
   });
 
-  // 像素数据
-  const [pixels, setPixels] = useState<boolean[][]>(() =>
+  // 像素数据 - 使用字符串表示颜色，空字符串表示透明/黑色
+  const [pixels, setPixels] = useState<string[][]>(() =>
     Array(VIRTUAL_CANVAS_HEIGHT)
       .fill(null)
-      .map(() => Array(VIRTUAL_CANVAS_WIDTH).fill(false))
+      .map(() => Array(VIRTUAL_CANVAS_WIDTH).fill(''))
   );
 
   // 计算倒计时位置
@@ -108,32 +128,29 @@ const Countdown: FC = () => {
   // 处理像素数据
   useEffect(() => {
     if (countdownData?.data) {
-      const binaryString = atob(countdownData.data);
-      const byteArray = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        byteArray[i] = binaryString.charCodeAt(i);
-      }
+      try {
+        // 新格式：Base64编码的JSON数据
+        const jsonString = atob(countdownData.data);
+        const canvasData: string[][] = JSON.parse(jsonString);
 
-      const newPixels: boolean[][] = Array(VIRTUAL_CANVAS_HEIGHT)
-        .fill(null)
-        .map(() => Array(VIRTUAL_CANVAS_WIDTH).fill(false));
-
-      let bitIndex = 0;
-      for (let byte of byteArray) {
-        for (let i = 7; i >= 0; i--) {
-          const bit = (byte >> i) & 1;
-          const row = Math.floor(bitIndex / VIRTUAL_CANVAS_WIDTH);
-          const col = bitIndex % VIRTUAL_CANVAS_WIDTH;
-          if (row < VIRTUAL_CANVAS_HEIGHT && col < VIRTUAL_CANVAS_WIDTH) {
-            newPixels[row][col] = bit === 1;
-            bitIndex++;
-          } else {
-            break;
-          }
+        // 验证数据格式
+        if (Array.isArray(canvasData) && canvasData.length > 0 && Array.isArray(canvasData[0])) {
+          setPixels(canvasData);
+        } else {
+          // 如果数据格式不正确，创建空画布
+          const emptyPixels: string[][] = Array(VIRTUAL_CANVAS_HEIGHT)
+            .fill(null)
+            .map(() => Array(VIRTUAL_CANVAS_WIDTH).fill(''));
+          setPixels(emptyPixels);
         }
-        if (bitIndex >= VIRTUAL_CANVAS_WIDTH * VIRTUAL_CANVAS_HEIGHT) break;
+      } catch (error) {
+        console.error('Failed to parse canvas data:', error);
+        // 创建空画布作为后备
+        const emptyPixels: string[][] = Array(VIRTUAL_CANVAS_HEIGHT)
+          .fill(null)
+          .map(() => Array(VIRTUAL_CANVAS_WIDTH).fill(''));
+        setPixels(emptyPixels);
       }
-      setPixels(newPixels);
     }
   }, [countdownData?.data]);
 
@@ -269,7 +286,13 @@ const Countdown: FC = () => {
           const isProtectedArea = virtualX >= startX && virtualX < startX + totalWidth &&
             virtualY >= startY && virtualY < startY + 5;
 
-          ctx.fillStyle = isProtectedArea ? 'gray' : pixels[virtualY][virtualX] ? 'white' : 'black';
+          // 支持彩色像素渲染
+          if (isProtectedArea) {
+            ctx.fillStyle = 'gray';
+          } else {
+            const pixelColor = pixels[virtualY][virtualX];
+            ctx.fillStyle = pixelColor || 'black';
+          }
           ctx.fillRect(screenX, screenY, Math.ceil(pixelsPerUnit), Math.ceil(pixelsPerUnit));
         }
       }
@@ -442,7 +465,12 @@ const Countdown: FC = () => {
       if (virtualX >= 0 && virtualX < VIRTUAL_CANVAS_WIDTH &&
         virtualY >= 0 && virtualY < VIRTUAL_CANVAS_HEIGHT) {
         try {
-          await api.countdown.countdownUpdatePixel(virtualX, virtualY, !pixels[virtualY][virtualX]);
+          // 如果当前像素是选中的颜色，则擦除（设为空），否则设为选中颜色
+          const currentColor = pixels[virtualY][virtualX];
+          const newColor = currentColor === selectedColor ? '' : selectedColor;
+
+          // 使用新的颜色API
+          await (api.countdown as any).countdownUpdatePixelColor(virtualX, virtualY, newColor);
           await mutate();
         } catch (e) {
           showErrorMsg(e, t);
@@ -643,30 +671,32 @@ const Countdown: FC = () => {
         flexDirection: 'column',
         zIndex: 9999
       }}>
-        {/* 全屏控制面板 */}
+        {/* 全屏控制面板 - 移动端适配 */}
         <div style={{
           position: 'absolute',
-          top: 20,
+          top: isMobile ? 70 : 80,
           left: '50%',
           transform: 'translateX(-50%)',
-          zIndex: 10000,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          borderRadius: '12px',
-          padding: '16px',
+          zIndex: 10001,
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          borderRadius: isMobile ? '8px' : '12px',
+          padding: isMobile ? '8px' : '16px',
           display: 'flex',
-          gap: '12px',
+          gap: isMobile ? '6px' : '12px',
           flexWrap: 'wrap',
-          alignItems: 'center'
+          alignItems: 'center',
+          maxWidth: isMobile ? '90vw' : 'auto'
         }}>
           <Group gap="xs">
             {/* 模式切换按钮 */}
             <Button
               variant={interactionMode === InteractionMode.DRAW ? "filled" : "outline"}
               onClick={() => setInteractionMode(InteractionMode.DRAW)}
-              leftSection={<Icon path={mdiMagnify} size={0.8} />}
-              size="xs"
+              leftSection={<Icon path={mdiMagnify} size={isMobile ? 0.6 : 0.8} />}
+              size={isMobile ? "compact-xs" : "xs"}
               color="white"
               title="绘画模式 (快捷键: 1)"
+              style={{ fontSize: isMobile ? '10px' : undefined }}
             >
               绘画
             </Button>
@@ -674,26 +704,103 @@ const Countdown: FC = () => {
             <Button
               variant={interactionMode === InteractionMode.VIEW ? "filled" : "outline"}
               onClick={() => setInteractionMode(InteractionMode.VIEW)}
-              leftSection={<Icon path={mdiCursorMove} size={0.8} />}
-              size="xs"
+              leftSection={<Icon path={mdiCursorMove} size={isMobile ? 0.6 : 0.8} />}
+              size={isMobile ? "compact-xs" : "xs"}
               color="white"
               title="导航模式 (快捷键: 2)"
+              style={{ fontSize: isMobile ? '10px' : undefined }}
             >
               导航
             </Button>
+
+            {/* 颜色选择器 */}
+            <Popover
+              width={isMobile ? 180 : 220}
+              position="bottom"
+              withArrow
+              shadow="md"
+              opened={colorPickerOpened}
+              onChange={setColorPickerOpened}
+            >
+              <Popover.Target>
+                <ActionIcon
+                  onClick={() => setColorPickerOpened(!colorPickerOpened)}
+                  size={isMobile ? "md" : "lg"}
+                  variant="filled"
+                  style={{ backgroundColor: selectedColor, border: '2px solid #ccc' }}
+                  title="选择颜色"
+                >
+                  <Icon path={mdiPalette} size={isMobile ? 0.6 : 0.8} color={selectedColor === '#000000' ? 'white' : 'black'} />
+                </ActionIcon>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Stack gap={isMobile ? "xs" : "sm"}>
+                  <Text size={isMobile ? "xs" : "sm"} fw={500}>选择颜色</Text>
+
+                  {/* 预设颜色 - 分两行显示 */}
+                  <Stack gap="xs">
+                    <Group gap="xs" justify="center">
+                      {PRESET_COLORS.slice(0, 6).map((color) => (
+                        <ActionIcon
+                          key={color}
+                          size={isMobile ? "xs" : "sm"}
+                          variant="filled"
+                          style={{
+                            backgroundColor: color,
+                            border: selectedColor === color ? '2px solid #007bff' : '1px solid #ccc'
+                          }}
+                          onClick={() => {
+                            setSelectedColor(color);
+                            setColorPickerOpened(false);
+                          }}
+                        />
+                      ))}
+                    </Group>
+                    <Group gap="xs" justify="center">
+                      {PRESET_COLORS.slice(6).map((color) => (
+                        <ActionIcon
+                          key={color}
+                          size={isMobile ? "xs" : "sm"}
+                          variant="filled"
+                          style={{
+                            backgroundColor: color,
+                            border: selectedColor === color ? '2px solid #007bff' : '1px solid #ccc'
+                          }}
+                          onClick={() => {
+                            setSelectedColor(color);
+                            setColorPickerOpened(false);
+                          }}
+                        />
+                      ))}
+                    </Group>
+                  </Stack>
+
+                  {/* 自定义颜色选择器 */}
+                  {!isMobile && (
+                    <ColorPicker
+                      format="hex"
+                      value={selectedColor}
+                      onChange={setSelectedColor}
+                      swatches={PRESET_COLORS}
+                      size="xs"
+                    />
+                  )}
+                </Stack>
+              </Popover.Dropdown>
+            </Popover>
 
             {/* 缩放控制 */}
             <ActionIcon
               variant="filled"
               color="gray"
               onClick={handleZoomOut}
-              size="lg"
+              size={isMobile ? "md" : "lg"}
               disabled={scale <= 0.25}
             >
-              <Icon path={mdiMinus} size={1} />
+              <Icon path={mdiMinus} size={isMobile ? 0.7 : 1} />
             </ActionIcon>
 
-            <Text size="sm" style={{ color: 'white', minWidth: '60px', textAlign: 'center' }}>
+            <Text size={isMobile ? "xs" : "sm"} style={{ color: 'white', minWidth: isMobile ? '40px' : '60px', textAlign: 'center', fontSize: isMobile ? '10px' : undefined }}>
               {Math.round(scale * 100)}%
             </Text>
 
@@ -701,19 +808,19 @@ const Countdown: FC = () => {
               variant="filled"
               color="gray"
               onClick={handleZoomIn}
-              size="lg"
+              size={isMobile ? "md" : "lg"}
               disabled={scale >= 8}
             >
-              <Icon path={mdiPlus} size={1} />
+              <Icon path={mdiPlus} size={isMobile ? 0.7 : 1} />
             </ActionIcon>
 
             <ActionIcon
               variant="filled"
               color="gray"
               onClick={handleResetView}
-              size="lg"
+              size={isMobile ? "md" : "lg"}
             >
-              <Icon path={mdiHome} size={1} />
+              <Icon path={mdiHome} size={isMobile ? 0.7 : 1} />
             </ActionIcon>
 
             {/* 退出全屏按钮 */}
@@ -721,45 +828,47 @@ const Countdown: FC = () => {
               variant="filled"
               color="red"
               onClick={handleToggleFullscreen}
-              size="lg"
+              size={isMobile ? "md" : "lg"}
             >
-              <Icon path={mdiFullscreenExit} size={1} />
+              <Icon path={mdiFullscreenExit} size={isMobile ? 0.7 : 1} />
             </ActionIcon>
           </Group>
         </div>
 
-        {/* 快捷键提示 */}
+        {/* 快捷键提示 - 优化移动端显示 */}
         <div style={{
           position: 'absolute',
-          top: 20,
-          right: 20,
-          zIndex: 10000,
+          top: isMobile ? 70 : 80,
+          right: isMobile ? 10 : 20,
+          zIndex: 10001,
           color: 'white',
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
           borderRadius: '8px',
-          padding: '12px',
-          fontSize: '12px',
-          lineHeight: '1.4'
+          padding: isMobile ? '8px' : '12px',
+          fontSize: isMobile ? '10px' : '12px',
+          lineHeight: '1.3',
+          maxWidth: isMobile ? '140px' : 'auto',
+          whiteSpace: isMobile ? 'nowrap' : 'normal'
         }}>
           <div><strong>快捷键:</strong></div>
-          <div>空格 - 切换模式</div>
-          <div>1 - 绘画模式</div>
-          <div>2 - 导航模式</div>
-          <div>ESC - 退出全屏</div>
+          <div>空格 - 切换</div>
+          <div>1 - 绘画</div>
+          <div>2 - 导航</div>
+          <div>ESC - 退出</div>
         </div>
 
         {/* 倒计时显示 */}
         <div style={{
           position: 'absolute',
-          top: 80,
+          top: isMobile ? 130 : 150,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 10000,
           color: 'white',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          padding: '8px 16px',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: isMobile ? '6px 12px' : '8px 16px',
           borderRadius: '8px',
-          fontSize: '18px',
+          fontSize: isMobile ? '14px' : '18px',
           fontWeight: 'bold',
         }}>
           {`${timeLeft.days.toString().padStart(2, '0')}:${timeLeft.hours.toString().padStart(2, '0')}:${timeLeft.minutes.toString().padStart(2, '0')}:${timeLeft.seconds.toString().padStart(2, '0')}`}
@@ -791,46 +900,68 @@ const Countdown: FC = () => {
         {/* 底部状态栏 */}
         <div style={{
           position: 'absolute',
-          bottom: 20,
-          left: 20,
+          bottom: isMobile ? 10 : 20,
+          left: isMobile ? 10 : 20,
           color: 'white',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          padding: '8px 12px',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: isMobile ? '6px 8px' : '8px 12px',
           borderRadius: '6px',
-          fontSize: '14px',
+          fontSize: isMobile ? '10px' : '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
-          位置: ({Math.round(viewX)}, {Math.round(viewY)}) | 缩放: {Math.round(scale * 100)}%
+          <span>
+            {isMobile ? `(${Math.round(viewX)}, ${Math.round(viewY)}) ${Math.round(scale * 100)}%` : `位置: (${Math.round(viewX)}, ${Math.round(viewY)}) | 缩放: ${Math.round(scale * 100)}%`}
+          </span>
+          {interactionMode === InteractionMode.DRAW && (
+            <>
+              <span style={{ color: '#ccc' }}>|</span>
+              <span style={{ fontSize: isMobile ? '9px' : '12px' }}>颜色:</span>
+              <div
+                style={{
+                  width: isMobile ? '12px' : '16px',
+                  height: isMobile ? '12px' : '16px',
+                  backgroundColor: selectedColor,
+                  border: '1px solid white',
+                  borderRadius: '2px'
+                }}
+              />
+            </>
+          )}
         </div>
 
         {/* 模式指示器 */}
         <div style={{
           position: 'absolute',
-          bottom: 20,
-          right: 20,
+          bottom: isMobile ? 10 : 20,
+          right: isMobile ? 10 : 20,
           color: 'white',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          padding: '8px 12px',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: isMobile ? '6px 8px' : '8px 12px',
           borderRadius: '6px',
-          fontSize: '14px',
+          fontSize: isMobile ? '10px' : '14px',
         }}>
-          {interactionMode === InteractionMode.DRAW ? '绘画模式' : '导航模式'}
+          {interactionMode === InteractionMode.DRAW ? '绘画' : '导航'}
         </div>
 
-        {/* 操作提示 */}
-        <div style={{
-          position: 'absolute',
-          bottom: 20,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          color: 'white',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          padding: '6px 12px',
-          borderRadius: '6px',
-          fontSize: '12px',
-          textAlign: 'center'
-        }}>
-          ESC键退出全屏 • 空格键快速切换模式 • 数字键1/2切换绘画/导航模式 • 双指缩放/鼠标滚轮缩放 • 导航模式下拖拽移动 • 绘画模式下点击绘制像素
-        </div>
+        {/* 操作提示 - 移动端简化显示 */}
+        {!isMobile && (
+          <div style={{
+            position: 'absolute',
+            bottom: 20,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: 'white',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            textAlign: 'center'
+          }}>
+            ESC键退出全屏 • 空格键快速切换模式 • 数字键1/2切换绘画/导航模式 • 双指缩放/鼠标滚轮缩放 • 导航模式下拖拽移动 • 绘画模式下点击绘制像素
+          </div>
+        )}
       </div>
     );
   }
@@ -870,6 +1001,80 @@ const Countdown: FC = () => {
               >
                 导航
               </Button>
+
+              {/* 颜色选择器 */}
+              <Popover
+                width={220}
+                position="bottom"
+                withArrow
+                shadow="md"
+                opened={colorPickerOpened}
+                onChange={setColorPickerOpened}
+              >
+                <Popover.Target>
+                  <ActionIcon
+                    onClick={() => setColorPickerOpened(!colorPickerOpened)}
+                    size="lg"
+                    variant="filled"
+                    style={{ backgroundColor: selectedColor, border: '2px solid #ccc' }}
+                    title="选择颜色"
+                  >
+                    <Icon path={mdiPalette} size={0.8} color={selectedColor === '#000000' ? 'white' : 'black'} />
+                  </ActionIcon>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="xs">
+                    <Text size="sm" fw={500}>选择颜色</Text>
+
+                    {/* 预设颜色 - 分两行显示 */}
+                    <Stack gap="xs">
+                      <Group gap="xs" justify="center">
+                        {PRESET_COLORS.slice(0, 6).map((color) => (
+                          <ActionIcon
+                            key={color}
+                            size="sm"
+                            variant="filled"
+                            style={{
+                              backgroundColor: color,
+                              border: selectedColor === color ? '2px solid #007bff' : '1px solid #ccc'
+                            }}
+                            onClick={() => {
+                              setSelectedColor(color);
+                              setColorPickerOpened(false);
+                            }}
+                          />
+                        ))}
+                      </Group>
+                      <Group gap="xs" justify="center">
+                        {PRESET_COLORS.slice(6).map((color) => (
+                          <ActionIcon
+                            key={color}
+                            size="sm"
+                            variant="filled"
+                            style={{
+                              backgroundColor: color,
+                              border: selectedColor === color ? '2px solid #007bff' : '1px solid #ccc'
+                            }}
+                            onClick={() => {
+                              setSelectedColor(color);
+                              setColorPickerOpened(false);
+                            }}
+                          />
+                        ))}
+                      </Group>
+                    </Stack>
+
+                    {/* 自定义颜色选择器 - 更紧凑 */}
+                    <ColorPicker
+                      format="hex"
+                      value={selectedColor}
+                      onChange={setSelectedColor}
+                      swatches={PRESET_COLORS}
+                      size="xs"
+                    />
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
 
               {/* 缩放控制 */}
               <ActionIcon
@@ -960,6 +1165,23 @@ const Countdown: FC = () => {
             {!isMobile && (
               <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs p-1 rounded">
                 {interactionMode === InteractionMode.DRAW ? '绘画模式' : '导航模式'}
+              </div>
+            )}
+
+            {/* 颜色指示器 - 显示当前选中颜色 */}
+            {!isMobile && interactionMode === InteractionMode.DRAW && (
+              <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white text-xs p-2 rounded flex items-center gap-2">
+                <span>当前颜色:</span>
+                <div
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    backgroundColor: selectedColor,
+                    border: '1px solid white',
+                    borderRadius: '2px'
+                  }}
+                />
+                <span>{selectedColor}</span>
               </div>
             )}
           </div>
