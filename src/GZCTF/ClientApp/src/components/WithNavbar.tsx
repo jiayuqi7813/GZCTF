@@ -72,6 +72,7 @@ export const WithNavBar: FC<WithNavBarProps> = ({
                 w={width ?? (isMobile ? '96%' : '80%')}
                 style={{
                   zIndex: 20,
+                  position: 'relative',
                 }}
               >
                 {children}

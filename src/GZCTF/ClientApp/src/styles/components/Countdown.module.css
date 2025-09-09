@@ -1,8 +1,6 @@
 .grid {
   display: block;
-  border: 2px solid var(--mantine-color-gray-4);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  cursor: pointer;
+  border: 1px solid var(--mantine-color-gray-4);
   user-select: none;
   touch-action: manipulation;
   image-rendering: pixelated;
@@ -13,12 +11,4 @@
   -khtml-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-}
-
-/* 移动端优化 */
-@media (max-width: 768px) {
-  .grid {
-    border: 1px solid var(--mantine-color-gray-4);
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
-  }
 }

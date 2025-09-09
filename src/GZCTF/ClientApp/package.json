@@ -77,6 +77,7 @@
     "prettier-plugin-sort-json": "^4.1.1",
     "swagger-typescript-api": "^13.2.9",
     "tslib": "^2.8.1",
+    "tsx": "^4.20.5",
     "typescript": "5.9.2",
     "vite": "npm:rolldown-vite@^7.1.7",
     "vite-plugin-banner": "^0.8.1",

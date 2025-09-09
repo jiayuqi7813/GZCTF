@@ -77,11 +77,11 @@ static class AppExtensions
 
         app.UseRouting();
 
-        if (app.Configuration.GetValue<bool>("DisableRateLimit") is not true)
-            app.UseRateLimiter();
-
         app.UseAuthentication();
         app.UseAuthorization();
+
+        if (app.Configuration.GetValue<bool>("DisableRateLimit") is not true)
+            app.UseRateLimiter();
 
         if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("RequestLogging"))
             app.UseRequestLogging();

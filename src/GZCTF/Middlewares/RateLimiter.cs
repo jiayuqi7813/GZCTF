@@ -139,10 +139,14 @@ public static class RateLimiter
             o.TokensPerPeriod = 50;
             o.ReplenishmentPeriod = TimeSpan.FromSeconds(5);
         });
-        options.AddPolicy(nameof(LimitPolicy.CountdownPutPixel), context =>
+        options.AddPolicy(nameof(LimitPolicy.CountdownPutPixel), httpContext =>
         {
-            var httpContext = (HttpContext)context;
-            var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("User ID not found");
+
+            var hasAdmin = ContextHelper.HasAdmin(httpContext);
+            hasAdmin.Wait();
+            if (hasAdmin.Result)
+                return RateLimitPartition.GetNoLimiter(userId);
 
             return RateLimitPartition.GetTokenBucketLimiter(userId,
                 _ => new TokenBucketRateLimiterOptions

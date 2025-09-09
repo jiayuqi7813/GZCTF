@@ -829,7 +829,7 @@ export interface ProblemDetails {
 export interface CanvasModel {
   /** @format uint64 */
   startTimeUtc?: number;
-  data?: string;
+  data?: Record<string, string>;
   /** @format int32 */
   width?: number;
   /** @format int32 */
@@ -2046,7 +2046,7 @@ export class HttpClient<SecurityDataType = unknown> {
       headers: {
         ...(method &&
           this.instance.defaults.headers[
-          method.toLowerCase() as keyof HeadersDefaults
+            method.toLowerCase() as keyof HeadersDefaults
           ]),
         ...params1.headers,
         ...(params2 && params2.headers),
@@ -3437,27 +3437,8 @@ export class Api<
      * No description
      *
      * @tags Countdown
-     * @name CountdownUpdatePixel
-     * @request GET:/api/countdown/pixel/{x}/{y}/{value}
-     */
-    countdownUpdatePixel: (
-      x: number,
-      y: number,
-      value: boolean,
-      params: RequestParams = {},
-    ) =>
-      this.request<void, RequestResponse>({
-        path: `/api/countdown/pixel/${x}/${y}/${value}`,
-        method: "GET",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Countdown
      * @name CountdownUpdatePixelColor
-     * @request POST:/api/countdown/pixel/{x}/{y}
+     * @request GET:/api/countdown/pixel/{x}/{y}/{color}
      */
     countdownUpdatePixelColor: (
       x: number,
@@ -3465,13 +3446,50 @@ export class Api<
       color: string,
       params: RequestParams = {},
     ) =>
-      this.request<void, RequestResponse>({
-        path: `/api/countdown/pixel/${x}/${y}`,
-        method: "POST",
-        body: JSON.stringify(color),
-        type: ContentType.Json,
+      this.request<RequestResponse, RequestResponse>({
+        path: `/api/countdown/pixel/${x}/${y}/${color}`,
+        method: "GET",
+        format: "json",
         ...params,
       }),
+    /**
+     * No description
+     *
+     * @tags Countdown
+     * @name CountdownUpdatePixelColor
+     * @request GET:/api/countdown/pixel/{x}/{y}/{color}
+     */
+    useCountdownUpdatePixelColor: (
+      x: number,
+      y: number,
+      color: string,
+      options?: SWRConfiguration,
+      doFetch: boolean = true,
+    ) =>
+      useSWR<RequestResponse, RequestResponse>(
+        doFetch ? `/api/countdown/pixel/${x}/${y}/${color}` : null,
+        options,
+      ),
+
+    /**
+     * No description
+     *
+     * @tags Countdown
+     * @name CountdownUpdatePixelColor
+     * @request GET:/api/countdown/pixel/{x}/{y}/{color}
+     */
+    mutateCountdownUpdatePixelColor: (
+      x: number,
+      y: number,
+      color: string,
+      data?: RequestResponse | Promise<RequestResponse>,
+      options?: MutatorOptions,
+    ) =>
+      mutate<RequestResponse>(
+        `/api/countdown/pixel/${x}/${y}/${color}`,
+        data,
+        options,
+      ),
   };
   edit = {
     /**

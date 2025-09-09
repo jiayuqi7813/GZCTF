@@ -1,4 +1,7 @@
 {
   "hint": "Login to draw pixel :)",
-  "title": "Challenge will be available after"
+  "paint": "paint",
+  "shortcut": "shortcut",
+  "title": "Challenge will be available after",
+  "toggle_mode": "toggle mode"
 }
