@@ -17,6 +17,10 @@ const VIRTUAL_CANVAS_HEIGHT = 1000;
 const VIEWPORT_WIDTH = 800;
 const VIEWPORT_HEIGHT = 400;
 
+// 移动端视窗尺寸
+const MOBILE_VIEWPORT_WIDTH = 320;
+const MOBILE_VIEWPORT_HEIGHT = 240;
+
 // 像素大小
 const PIXEL_SIZE = 12;
 
@@ -76,11 +80,24 @@ const Countdown: FC = () => {
   const startY = centerY - 2;
 
   // 计算可视范围
-  const currentViewportWidth = isFullscreen ? window.innerWidth : VIEWPORT_WIDTH;
-  const currentViewportHeight = isFullscreen ? window.innerHeight : VIEWPORT_HEIGHT;
+  const currentViewportWidth = isFullscreen
+    ? window.innerWidth
+    : (isMobile ? MOBILE_VIEWPORT_WIDTH : VIEWPORT_WIDTH);
+  const currentViewportHeight = isFullscreen
+    ? window.innerHeight
+    : (isMobile ? MOBILE_VIEWPORT_HEIGHT : VIEWPORT_HEIGHT);
 
   const visibleWidth = currentViewportWidth / (PIXEL_SIZE * scale);
   const visibleHeight = currentViewportHeight / (PIXEL_SIZE * scale);
+
+  // 根据移动端状态调整默认缩放
+  useEffect(() => {
+    if (isMobile) {
+      setScale(0.5);
+    } else {
+      setScale(1);
+    }
+  }, [isMobile]);
 
   // 初始化视图到中心位置
   useEffect(() => {
@@ -172,8 +189,10 @@ const Countdown: FC = () => {
     } else {
       // 退出全屏模式
       setIsFullscreen(false);
-      setViewX(centerX - VIEWPORT_WIDTH / (PIXEL_SIZE * 2));
-      setViewY(centerY - VIEWPORT_HEIGHT / (PIXEL_SIZE * 2));
+      const resetWidth = isMobile ? MOBILE_VIEWPORT_WIDTH : VIEWPORT_WIDTH;
+      const resetHeight = isMobile ? MOBILE_VIEWPORT_HEIGHT : VIEWPORT_HEIGHT;
+      setViewX(centerX - resetWidth / (PIXEL_SIZE * 2));
+      setViewY(centerY - resetHeight / (PIXEL_SIZE * 2));
       setScale(1);
     }
   };
@@ -183,8 +202,10 @@ const Countdown: FC = () => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isFullscreen) {
         setIsFullscreen(false);
-        setViewX(centerX - VIEWPORT_WIDTH / (PIXEL_SIZE * 2));
-        setViewY(centerY - VIEWPORT_HEIGHT / (PIXEL_SIZE * 2));
+        const resetWidth = isMobile ? MOBILE_VIEWPORT_WIDTH : VIEWPORT_WIDTH;
+        const resetHeight = isMobile ? MOBILE_VIEWPORT_HEIGHT : VIEWPORT_HEIGHT;
+        setViewX(centerX - resetWidth / (PIXEL_SIZE * 2));
+        setViewY(centerY - resetHeight / (PIXEL_SIZE * 2));
         setScale(1);
       }
 
@@ -222,8 +243,12 @@ const Countdown: FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const canvasWidth = isFullscreen ? window.innerWidth : VIEWPORT_WIDTH;
-    const canvasHeight = isFullscreen ? window.innerHeight : VIEWPORT_HEIGHT;
+    const canvasWidth = isFullscreen
+      ? window.innerWidth
+      : (isMobile ? MOBILE_VIEWPORT_WIDTH : VIEWPORT_WIDTH);
+    const canvasHeight = isFullscreen
+      ? window.innerHeight
+      : (isMobile ? MOBILE_VIEWPORT_HEIGHT : VIEWPORT_HEIGHT);
 
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -371,8 +396,12 @@ const Countdown: FC = () => {
     if (!ctx) return;
 
     // 设置尺寸
-    const canvasWidth = isFullscreen ? window.innerWidth : VIEWPORT_WIDTH;
-    const canvasHeight = isFullscreen ? window.innerHeight : VIEWPORT_HEIGHT;
+    const canvasWidth = isFullscreen
+      ? window.innerWidth
+      : (isMobile ? MOBILE_VIEWPORT_WIDTH : VIEWPORT_WIDTH);
+    const canvasHeight = isFullscreen
+      ? window.innerHeight
+      : (isMobile ? MOBILE_VIEWPORT_HEIGHT : VIEWPORT_HEIGHT);
 
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
@@ -387,6 +416,9 @@ const Countdown: FC = () => {
   // 处理交互
   const handleCanvasInteraction = async (clientX: number, clientY: number) => {
     if (!currentUser) return;
+
+    // 手机模式下禁用绘画功能
+    if (isMobile) return;
 
     if (interactionMode === InteractionMode.DRAW) {
       const canvas = canvasRef.current;
@@ -573,8 +605,10 @@ const Countdown: FC = () => {
         const centerX = (mouseX) / (PIXEL_SIZE * scale) + viewX;
         const centerY = (mouseY) / (PIXEL_SIZE * scale) + viewY;
 
-        const newVisibleWidth = VIEWPORT_WIDTH / (PIXEL_SIZE * newScale);
-        const newVisibleHeight = VIEWPORT_HEIGHT / (PIXEL_SIZE * newScale);
+        const viewportWidth = isMobile ? MOBILE_VIEWPORT_WIDTH : VIEWPORT_WIDTH;
+        const viewportHeight = isMobile ? MOBILE_VIEWPORT_HEIGHT : VIEWPORT_HEIGHT;
+        const newVisibleWidth = viewportWidth / (PIXEL_SIZE * newScale);
+        const newVisibleHeight = viewportHeight / (PIXEL_SIZE * newScale);
 
         setViewX(Math.max(0, Math.min(centerX - mouseX / (PIXEL_SIZE * newScale), VIRTUAL_CANVAS_WIDTH - newVisibleWidth)));
         setViewY(Math.max(0, Math.min(centerY - mouseY / (PIXEL_SIZE * newScale), VIRTUAL_CANVAS_HEIGHT - newVisibleHeight)));
@@ -815,111 +849,119 @@ const Countdown: FC = () => {
           </Title>
 
 
-          {/* 控制面板 */}
-          <Group gap="md">
-            {/* 模式切换 */}
-            <Button
-              variant={interactionMode === InteractionMode.DRAW ? "filled" : "outline"}
-              onClick={() => setInteractionMode(InteractionMode.DRAW)}
-              leftSection={<Icon path={mdiMagnify} size={0.8} />}
-              size="xs"
-            >
-              绘画
-            </Button>
+          {/* 控制面板 - 手机模式下隐藏 */}
+          {!isMobile && (
+            <Group gap="md">
+              {/* 模式切换 */}
+              <Button
+                variant={interactionMode === InteractionMode.DRAW ? "filled" : "outline"}
+                onClick={() => setInteractionMode(InteractionMode.DRAW)}
+                leftSection={<Icon path={mdiMagnify} size={0.8} />}
+                size="xs"
+              >
+                绘画
+              </Button>
 
-            <Button
-              variant={interactionMode === InteractionMode.VIEW ? "filled" : "outline"}
-              onClick={() => setInteractionMode(InteractionMode.VIEW)}
-              leftSection={<Icon path={mdiCursorMove} size={0.8} />}
-              size="xs"
-            >
-              导航
-            </Button>
+              <Button
+                variant={interactionMode === InteractionMode.VIEW ? "filled" : "outline"}
+                onClick={() => setInteractionMode(InteractionMode.VIEW)}
+                leftSection={<Icon path={mdiCursorMove} size={0.8} />}
+                size="xs"
+              >
+                导航
+              </Button>
 
-            {/* 缩放控制 */}
-            <ActionIcon
-              onClick={handleZoomOut}
-              size="lg"
-              variant="filled"
-              disabled={scale <= 0.25}
-            >
-              <Icon path={mdiMinus} size={0.8} />
-            </ActionIcon>
+              {/* 缩放控制 */}
+              <ActionIcon
+                onClick={handleZoomOut}
+                size="lg"
+                variant="filled"
+                disabled={scale <= 0.25}
+              >
+                <Icon path={mdiMinus} size={0.8} />
+              </ActionIcon>
 
-            <Text size="sm" ta="center" style={{ minWidth: '60px' }}>
-              {Math.round(scale * 100)}%
-            </Text>
+              <Text size="sm" ta="center" style={{ minWidth: '60px' }}>
+                {Math.round(scale * 100)}%
+              </Text>
 
-            <ActionIcon
-              onClick={handleZoomIn}
-              size="lg"
-              variant="filled"
-              disabled={scale >= 8}
-            >
-              <Icon path={mdiPlus} size={0.8} />
-            </ActionIcon>
+              <ActionIcon
+                onClick={handleZoomIn}
+                size="lg"
+                variant="filled"
+                disabled={scale >= 8}
+              >
+                <Icon path={mdiPlus} size={0.8} />
+              </ActionIcon>
 
-            <ActionIcon
-              onClick={handleResetView}
-              size="lg"
-              variant="filled"
-            >
-              <Icon path={mdiHome} size={0.8} />
-            </ActionIcon>
+              <ActionIcon
+                onClick={handleResetView}
+                size="lg"
+                variant="filled"
+              >
+                <Icon path={mdiHome} size={0.8} />
+              </ActionIcon>
 
-            {/* 全屏按钮 */}
-            <ActionIcon
-              onClick={handleToggleFullscreen}
-              size="lg"
-              variant="filled"
-              color="blue"
-            >
-              <Icon path={mdiFullscreen} size={0.8} />
-            </ActionIcon>
-          </Group>
+              {/* 全屏按钮 */}
+              <ActionIcon
+                onClick={handleToggleFullscreen}
+                size="lg"
+                variant="filled"
+                color="blue"
+              >
+                <Icon path={mdiFullscreen} size={0.8} />
+              </ActionIcon>
+            </Group>
+          )}
 
           {/* 画布区域 */}
           <div
             className="border-2 border-gray-300 relative"
             style={{
-              width: VIEWPORT_WIDTH,
-              height: VIEWPORT_HEIGHT,
-              cursor: interactionMode === InteractionMode.VIEW
-                ? (isDragging ? 'grabbing' : 'grab')
-                : 'crosshair',
+              width: isMobile ? MOBILE_VIEWPORT_WIDTH : VIEWPORT_WIDTH,
+              height: isMobile ? MOBILE_VIEWPORT_HEIGHT : VIEWPORT_HEIGHT,
+              cursor: isMobile
+                ? 'default'
+                : (interactionMode === InteractionMode.VIEW
+                  ? (isDragging ? 'grabbing' : 'grab')
+                  : 'crosshair'),
             }}
           >
             <canvas
               ref={canvasRef}
-              width={VIEWPORT_WIDTH}
-              height={VIEWPORT_HEIGHT}
-              onClick={handleCanvasClick}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onWheel={handleWheel}
+              width={isMobile ? MOBILE_VIEWPORT_WIDTH : VIEWPORT_WIDTH}
+              height={isMobile ? MOBILE_VIEWPORT_HEIGHT : VIEWPORT_HEIGHT}
+              onClick={!isMobile ? handleCanvasClick : undefined}
+              onTouchStart={!isMobile ? handleTouchStart : undefined}
+              onTouchMove={!isMobile ? handleTouchMove : undefined}
+              onTouchEnd={!isMobile ? handleTouchEnd : undefined}
+              onMouseDown={!isMobile ? handleMouseDown : undefined}
+              onMouseMove={!isMobile ? handleMouseMove : undefined}
+              onMouseUp={!isMobile ? handleMouseUp : undefined}
+              onMouseLeave={!isMobile ? handleMouseUp : undefined}
+              onWheel={!isMobile ? handleWheel : undefined}
               className={classes.grid}
               style={{
-                width: `${VIEWPORT_WIDTH}px`,
-                height: `${VIEWPORT_HEIGHT}px`,
-                touchAction: 'none',
+                width: `${isMobile ? MOBILE_VIEWPORT_WIDTH : VIEWPORT_WIDTH}px`,
+                height: `${isMobile ? MOBILE_VIEWPORT_HEIGHT : VIEWPORT_HEIGHT}px`,
+                touchAction: isMobile ? 'auto' : 'none',
               }}
-              aria-description={`Countdown canvas. Mode: ${interactionMode}. Position: ${Math.floor(viewX)}, ${Math.floor(viewY)}. Scale: ${Math.round(scale * 100)}%`}
+              aria-description={`Countdown canvas. ${!isMobile ? `Mode: ${interactionMode}. Position: ${Math.floor(viewX)}, ${Math.floor(viewY)}. Scale: ${Math.round(scale * 100)}%` : 'View only mode'}`}
             />
 
-            {/* 视图信息覆盖层 */}
-            <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs p-1 rounded">
-              {Math.floor(viewX)}, {Math.floor(viewY)} | {Math.round(scale * 100)}%
-            </div>
+            {/* 视图信息覆盖层 - 手机模式下隐藏 */}
+            {!isMobile && (
+              <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs p-1 rounded">
+                {Math.floor(viewX)}, {Math.floor(viewY)} | {Math.round(scale * 100)}%
+              </div>
+            )}
 
-            {/* 模式指示器 */}
-            <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs p-1 rounded">
-              {interactionMode === InteractionMode.DRAW ? '绘画模式' : '导航模式'}
-            </div>
+            {/* 模式指示器 - 手机模式下隐藏 */}
+            {!isMobile && (
+              <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs p-1 rounded">
+                {interactionMode === InteractionMode.DRAW ? '绘画模式' : '导航模式'}
+              </div>
+            )}
           </div>
 
           <div className="text-center px-2">
